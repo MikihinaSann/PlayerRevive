@@ -1,7 +1,6 @@
 package team.creative.playerrevive.server;
 
 import java.io.IOException;
-import java.util.Iterator;
 
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.BannedPlayerEntry;
@@ -119,17 +118,19 @@ public class PlayerReviveServer {
             }
         }
 
+        // resetPlayer already sends update packet, but state changed after (revive + pose)
+        // so send one final packet with the correct final state
         sendUpdatePacket(player);
     }
 
     public static void removePlayerAsHelper(PlayerEntity player) {
-        for (Iterator<ServerPlayerEntity> iterator = player.getServer().getPlayerManager().getPlayerList().iterator(); iterator.hasNext();) {
-            ServerPlayerEntity member = iterator.next();
+        for (ServerPlayerEntity member : player.getServer().getPlayerManager().getPlayerList()) {
             IBleeding revive = getBleeding(member);
-            PlayerReviveEvents.fireReviveCancel(player, member);
-            revive.revivingPlayers().remove(player);
+            if (revive.revivingPlayers().contains(player)) {
+                PlayerReviveEvents.fireReviveCancel(player, member);
+                revive.revivingPlayers().remove(player);
+            }
         }
-
     }
 
     // TrackedData for persistent bleeding state (replaces getPersistentData().putBoolean)

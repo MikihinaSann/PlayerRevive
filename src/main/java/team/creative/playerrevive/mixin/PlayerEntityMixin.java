@@ -54,9 +54,8 @@ public abstract class PlayerEntityMixin implements BleedingHolder {
 
     @Inject(method = "updatePose", at = @At("HEAD"), cancellable = true)
     private void onUpdatePose(CallbackInfo ci) {
-        PlayerEntity player = (PlayerEntity) (Object) this;
-        if (((BleedingHolder) player).playerrevive$getBleeding() != null &&
-                ((BleedingHolder) player).playerrevive$getBleeding().isBleeding()) {
+        Bleeding bleeding = this.playerrevive$getBleeding();
+        if (bleeding != null && bleeding.isBleeding()) {
             ci.cancel();
         }
     }

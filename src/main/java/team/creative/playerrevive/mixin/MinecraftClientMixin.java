@@ -72,10 +72,10 @@ public class MinecraftClientMixin {
 
     private static boolean isBleeding() {
         var mc = net.minecraft.client.MinecraftClient.getInstance();
-        if (mc.player != null && mc.player.isAlive()) {
-            IBleeding bleeding = PlayerReviveServer.getBleeding(mc.player);
-            return bleeding.isBleeding();
-        }
-        return false;
+        if (mc.player == null || !mc.player.isAlive())
+            return false;
+        // Fast-path: if no Bleeding object exists, player is not bleeding
+        var bleeding = ((team.creative.playerrevive.api.BleedingHolder) mc.player).playerrevive$getBleeding();
+        return bleeding != null && bleeding.isBleeding();
     }
 }

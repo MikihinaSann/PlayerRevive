@@ -11,9 +11,6 @@ import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ChatScreen;
-import net.minecraft.client.gui.screen.DeathScreen;
-import net.minecraft.client.gui.screen.GameMenuScreen;
-import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.client.render.RenderTickCounter;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
@@ -42,6 +39,9 @@ public class ReviveEventClient {
     public static boolean helpActive = false;
     public static boolean inPauseScreen = false;
 
+    // Reusable list to avoid per-frame allocation
+    private final List<Text> hudLines = new ArrayList<>(4);
+
     public static void register() {
         ReviveEventClient instance = new ReviveEventClient();
         ClientTickEvents.END_CLIENT_TICK.register(instance::clientTick);
@@ -50,11 +50,14 @@ public class ReviveEventClient {
 
     public static void render(DrawContext graphics, List<Text> list) {
         int space = 15;
+        int centerX = mc.getWindow().getScaledWidth() / 2;
+        int centerY = mc.getWindow().getScaledHeight() / 2;
         for (int i = 0; i < list.size(); i++) {
             String text = list.get(i).getString();
+            int textWidth = mc.textRenderer.getWidth(text);
             graphics.drawText(mc.textRenderer, text,
-                    mc.getWindow().getScaledWidth() / 2 - mc.textRenderer.getWidth(text) / 2,
-                    mc.getWindow().getScaledHeight() / 2 + ((list.size() / 2) * space - space * (i + 1)),
+                    centerX - textWidth / 2,
+                    centerY + ((list.size() / 2) * space - space * (i + 1)),
                     0xFFFFFF, true);
         }
     }
@@ -75,7 +78,6 @@ public class ReviveEventClient {
         IBleeding revive = PlayerReviveServer.getBleeding(player);
 
         if (revive.isBleeding()) {
-            // Handle give up
             if (client.options.attackKey.isPressed()) {
                 if (giveUpTimer > PlayerReviveFabric.CONFIG.bleeding.giveUpSeconds * 20) {
                     PlayerReviveFabric.NETWORK.sendToServer(new GiveUpPacket());
@@ -87,17 +89,14 @@ public class ReviveEventClient {
                 giveUpTimer = 0;
             }
 
-            // Handle self-revive
             if (PlayerReviveFabric.CONFIG.revive.selfRevive.enabled && client.options.useKey.isPressed() &&
                     player.isHolding(stack -> PlayerReviveFabric.CONFIG.revive.selfRevive.item.is(stack) &&
                             stack.getCount() >= PlayerReviveFabric.CONFIG.revive.selfRevive.itemCount))
                 PlayerReviveFabric.NETWORK.sendToServer(new StartSelfRevivePacket());
-
-            // Screen blocking is handled by MinecraftClientScreenMixin (like original ScreenEvent.Opening)
         } else {
             giveUpTimer = 0;
 
-            // Force look at target when helping (forceLookAt)
+            // Force look at target when helping
             if (PlayerReviveFabric.CONFIG.revive.forceLookAt && helpActive) {
                 PlayerEntity other = player.getWorld().getPlayerByUuid(helpTarget);
                 if (other != null) {
@@ -129,7 +128,6 @@ public class ReviveEventClient {
         IBleeding revive = PlayerReviveServer.getBleeding(player);
 
         if (!revive.isBleeding() || !player.isAlive()) {
-            // --- Not bleeding: cleanup ---
             lastHighTension = false;
             if (lastShader) {
                 ((GameRendererAccessor) mc.gameRenderer).setPostProcessorEnabled(false);
@@ -147,28 +145,23 @@ public class ReviveEventClient {
                 sound = null;
             }
 
-            // Show helper HUD
             if (helpActive && !mc.options.hudHidden && mc.currentScreen == null) {
                 PlayerEntity other = player.getWorld().getPlayerByUuid(helpTarget);
                 if (other != null) {
-                    List<Text> list = new ArrayList<>();
                     IBleeding bleeding = PlayerReviveServer.getBleeding(other);
-                    list.add(Text.translatable("playerrevive.gui.label.time_left", formatTime(bleeding.timeLeft())));
-                    list.add(Text.literal("" + bleeding.getProgress() + "/" + PlayerReviveFabric.CONFIG.revive.requiredReviveProgress));
-                    render(graphics, list);
+                    hudLines.clear();
+                    hudLines.add(Text.translatable("playerrevive.gui.label.time_left", formatTime(bleeding.timeLeft())));
+                    hudLines.add(Text.literal("" + bleeding.getProgress() + "/" + PlayerReviveFabric.CONFIG.revive.requiredReviveProgress));
+                    render(graphics, hudLines);
                 }
             }
         } else {
-            // --- Bleeding: effects + HUD ---
-
-            // Only add jump effect once
             if (!addedEffect) {
                 player.addStatusEffect(new StatusEffectInstance(StatusEffects.JUMP_BOOST, 0, -10));
                 addedEffect = true;
             }
             player.hurtTime = 0;
 
-            // Tension sounds
             if (revive.timeLeft() < 400) {
                 if (!lastHighTension) {
                     if (!PlayerReviveFabric.CONFIG.disableMusic) {
@@ -190,7 +183,6 @@ public class ReviveEventClient {
                 }
             }
 
-            // Shader effect — reload if missing (F5/reset can clear it)
             if (PlayerReviveFabric.CONFIG.bleeding.hasShaderEffect) {
                 if (mc.gameRenderer.getPostProcessor() == null) {
                     ((GameRendererAccessor) mc.gameRenderer).invokeLoadPostProcessor(BLUR_SHADER);
@@ -202,34 +194,33 @@ public class ReviveEventClient {
                 }
             }
 
-            // Render bleeding HUD text
             if (!mc.options.hudHidden && (mc.currentScreen == null || mc.currentScreen instanceof ChatScreen)) {
-                List<Text> list = new ArrayList<>();
-                list.add(Text.translatable("playerrevive.gui.label.time_left", formatTime(revive.timeLeft())));
-                list.add(Text.literal("" + TooltipUtils.print(revive.getProgress()) + "/" + PlayerReviveFabric.CONFIG.revive.requiredReviveProgress));
-                list.add(Text.translatable("playerrevive.gui.give_up.hold", mc.options.attackKey.getBoundKeyLocalizedText(),
+                hudLines.clear();
+                hudLines.add(Text.translatable("playerrevive.gui.label.time_left", formatTime(revive.timeLeft())));
+                hudLines.add(Text.literal("" + TooltipUtils.print(revive.getProgress()) + "/" + PlayerReviveFabric.CONFIG.revive.requiredReviveProgress));
+                hudLines.add(Text.translatable("playerrevive.gui.give_up.hold", mc.options.attackKey.getBoundKeyLocalizedText(),
                         ((PlayerReviveFabric.CONFIG.bleeding.giveUpSeconds * 20 - giveUpTimer) / 20) + 1));
 
                 if (PlayerReviveFabric.CONFIG.revive.selfRevive.enabled)
-                    list.add(Text.translatable("playerrevive.gui.self_revive.hold", PlayerReviveFabric.CONFIG.revive.selfRevive.itemCount,
+                    hudLines.add(Text.translatable("playerrevive.gui.self_revive.hold", PlayerReviveFabric.CONFIG.revive.selfRevive.itemCount,
                             PlayerReviveFabric.CONFIG.revive.selfRevive.item.description()));
-                render(graphics, list);
+                render(graphics, hudLines);
             }
         }
     }
 
     public String formatTime(int timeLeft) {
-        int lengthOfMinute = 20 * 60;
-        int lengthOfHour = lengthOfMinute * 60;
-
-        int hours = timeLeft / lengthOfHour;
-        timeLeft -= hours * lengthOfHour;
-
-        int minutes = timeLeft / lengthOfMinute;
-        timeLeft -= minutes * lengthOfMinute;
-
         int seconds = timeLeft / 20;
-        return String.format("%02d:%02d:%02d", hours, minutes, seconds);
+        int hours = seconds / 3600;
+        int minutes = (seconds % 3600) / 60;
+        seconds = seconds % 60;
+        StringBuilder sb = new StringBuilder(8);
+        if (hours < 10) sb.append('0');
+        sb.append(hours).append(':');
+        if (minutes < 10) sb.append('0');
+        sb.append(minutes).append(':');
+        if (seconds < 10) sb.append('0');
+        sb.append(seconds);
+        return sb.toString();
     }
-
 }

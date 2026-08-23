@@ -11,11 +11,8 @@ import net.minecraft.sound.SoundCategory;
 import net.minecraft.text.Text;
 import net.minecraft.entity.damage.DamageSource;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
-import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.world.event.GameEvent;
 import team.creative.creativecore.common.config.premade.MobEffectConfig;
 import team.creative.playerrevive.PlayerReviveFabric;
 import team.creative.playerrevive.PlayerReviveConfig.DamageTypeConfig;
@@ -33,8 +30,6 @@ public class ReviveEventServer {
     }
 
     public static void register() {
-        // Player tick - handled via mixin in PlayerEntityMixin (server side tick injection)
-        // We use ServerTickEvents for the per-player tick
         net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_WORLD_TICK.register(world -> {
             for (ServerPlayerEntity player : world.getPlayers()) {
                 if (!player.isAlive())
@@ -66,8 +61,6 @@ public class ReviveEventServer {
             }
         });
 
-        // Player leave - kill bleeding player on disconnect (same as original NeoForge)
-        // But if server is stopping, don't kill — let NBT save/restore handle it
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
             ServerPlayerEntity player = handler.getPlayer();
             IBleeding revive = PlayerReviveServer.getBleeding(player);
@@ -76,12 +69,10 @@ public class ReviveEventServer {
             PlayerReviveServer.removePlayerAsHelper(player);
         });
 
-        // Player join - restore bleeding state if saved in NBT
         net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             ServerPlayerEntity player = handler.getPlayer();
             IBleeding revive = PlayerReviveServer.getBleeding(player);
             if (revive.isBleeding()) {
-                // Bleeding state restored from NBT — set health and send update
                 player.setHealth(PlayerReviveFabric.CONFIG.bleeding.bleedingHealth);
                 if (PlayerReviveFabric.CONFIG.bleeding.affectHunger)
                     player.getHungerManager().setFoodLevel(PlayerReviveFabric.CONFIG.bleeding.remainingHunger);
@@ -89,7 +80,6 @@ public class ReviveEventServer {
             }
         });
 
-        // Player interact - start reviving
         UseEntityCallback.EVENT.register((player, world, hand, entity, hitResult) -> {
             if (entity instanceof PlayerEntity && !world.isClient) {
                 PlayerEntity target = (PlayerEntity) entity;
@@ -133,11 +123,13 @@ public class ReviveEventServer {
     public static boolean doesByPass(PlayerEntity player, DamageSource source) {
         if (source.isOf(PlayerReviveFabric.BLED_TO_DEATH))
             return true;
-        if (PlayerReviveFabric.CONFIG.bypassDamageSources.contains(source.getName()))
+        String name = source.getName();
+        if (PlayerReviveFabric.CONFIG.bypassDamageSources.contains(name))
             return true;
-        if (PlayerReviveFabric.CONFIG.bypassDamageSources.contains(source.getTypeRegistryEntry().getKey().get().getValue().toString()))
+        // Only do expensive lookup if name didn't match
+        var key = source.getTypeRegistryEntry().getKey();
+        if (key.isPresent() && PlayerReviveFabric.CONFIG.bypassDamageSources.contains(key.get().getValue().toString()))
             return true;
-
         return false;
     }
 
@@ -147,19 +139,23 @@ public class ReviveEventServer {
         float amount = ((PlayerExtender) player).getOverkill();
         if (PlayerReviveFabric.CONFIG.bypassDamage <= amount)
             return true;
+        String name = source.getName();
+        String fullId = null;
         for (DamageTypeConfig d : PlayerReviveFabric.CONFIG.bypassSourceByDamage) {
             if (d.damageAmount > amount)
                 continue;
-            if (d.damageType.equals(source.getName()) || d.damageType.equals(source.getTypeRegistryEntry().getKey().get().getValue().toString()))
+            if (d.damageType.equals(name))
+                return true;
+            if (fullId == null) {
+                var key = source.getTypeRegistryEntry().getKey();
+                fullId = key.isPresent() ? key.get().getValue().toString() : "";
+            }
+            if (d.damageType.equals(fullId))
                 return true;
         }
         return false;
     }
 
-    /**
-     * Called from PlayerEntityMixin to handle damage to bleeding players.
-     * Returns true to cancel the damage.
-     */
     public static boolean onPlayerDamaged(PlayerEntity player, DamageSource source) {
         IBleeding revive = PlayerReviveServer.getBleeding(player);
         if (revive.isBleeding()) {
@@ -187,18 +183,11 @@ public class ReviveEventServer {
         return false;
     }
 
-    /**
-     * Called from PlayerEntityMixin to track overkill damage.
-     */
     public static void onPlayerDamagePre(PlayerEntity player, float newDamage) {
         if (player instanceof PlayerExtender extender && isReviveActive(player))
             extender.setOverkill(Math.max(0, newDamage - player.getHealth()));
     }
 
-    /**
-     * Called from PlayerEntityMixin to intercept player death.
-     * Returns true to cancel the death (start bleeding instead).
-     */
     public static boolean onPlayerDeath(PlayerEntity player, DamageSource source) {
         if (!isReviveActive(player))
             return false;
@@ -238,13 +227,9 @@ public class ReviveEventServer {
             } else
                 player.getServer().getPlayerManager().broadcast(Text.translatable("playerrevive.chat.bleeding", player.getDisplayName()), false);
 
-        return true; // Cancel death
+        return true;
     }
 
-    /**
-     * Called from ServerPlayerEntityMixin to block commands when bleeding.
-     * Returns true to block the command.
-     */
     public static boolean onCommand(ServerCommandSource source) {
         if (PlayerReviveFabric.CONFIG.bleeding.disableServerCommands && source.isExecutedByPlayer() && PlayerReviveServer.getBleeding(source.getPlayer()).isBleeding()) {
             source.getPlayer().sendMessage(Text.translatable("playerrevive.chat.no_commands"));
