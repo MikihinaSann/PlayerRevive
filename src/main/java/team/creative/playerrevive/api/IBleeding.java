@@ -2,46 +2,48 @@ package team.creative.playerrevive.api;
 
 import java.util.List;
 
-import net.minecraft.core.RegistryAccess;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.entity.player.Player;
-import net.neoforged.neoforge.common.util.INBTSerializable;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.registry.DynamicRegistryManager;
+import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.entity.player.PlayerEntity;
 
-public interface IBleeding extends INBTSerializable<CompoundTag> {
-    
-    public void tick(Player player);
-    
-    public float getProgress();
-    
-    public boolean isBleeding();
-    
-    public boolean bledOut();
-    
-    public void forceBledOut();
-    
-    public void knockOut(Player player, DamageSource source);
-    
-    public boolean revived();
-    
-    public void revive(Player player);
-    
-    public int timeLeft();
-    
-    public int downedTime();
-    
-    public List<Player> revivingPlayers();
-    
-    public DamageSource getSource(RegistryAccess access);
-    
-    public CombatTrackerClone getTrackerClone();
-    
-    public boolean isItemConsumed();
-    
-    public void setItemConsumed();
-    
-    public void startSelfRevive();
-    
-    public boolean isSelfReviving();
-    
+public interface IBleeding {
+
+    void tick(PlayerEntity player);
+
+    float getProgress();
+
+    boolean isBleeding();
+
+    boolean bledOut();
+
+    void forceBledOut();
+
+    void knockOut(PlayerEntity player, DamageSource source);
+
+    boolean revived();
+
+    void revive(PlayerEntity player);
+
+    int timeLeft();
+
+    int downedTime();
+
+    List<PlayerEntity> revivingPlayers();
+
+    DamageSource getSource(DynamicRegistryManager access);
+
+    DamageTrackerClone getTrackerClone();
+
+    boolean isItemConsumed();
+
+    void setItemConsumed();
+
+    void startSelfRevive();
+
+    boolean isSelfReviving();
+
+    NbtCompound serializeNBT();
+
+    void deserializeNBT(NbtCompound nbt);
 }

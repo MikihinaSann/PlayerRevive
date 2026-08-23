@@ -4,21 +4,21 @@ import java.util.List;
 
 import com.google.common.collect.Lists;
 
-import net.minecraft.world.damagesource.CombatEntry;
-import net.minecraft.world.damagesource.CombatTracker;
-import team.creative.playerrevive.mixin.CombatTrackerAccessor;
+import net.minecraft.entity.damage.DamageRecord;
+import net.minecraft.entity.damage.DamageTracker;
+import team.creative.playerrevive.mixin.DamageTrackerAccessor;
 
-public class CombatTrackerClone {
-    
-    private final List<CombatEntry> combatEntries = Lists.<CombatEntry>newArrayList();
+public class DamageTrackerClone {
+
+    private final List<DamageRecord> combatEntries = Lists.<DamageRecord>newArrayList();
     private int lastDamageTime;
     private int combatStartTime;
     private int combatEndTime;
     private boolean inCombat;
     private boolean takingDamage;
-    
-    public CombatTrackerClone(CombatTracker tracker) {
-        CombatTrackerAccessor ac = (CombatTrackerAccessor) tracker;
+
+    public DamageTrackerClone(DamageTracker tracker) {
+        DamageTrackerAccessor ac = (DamageTrackerAccessor) tracker;
         combatEntries.addAll(ac.getEntries());
         lastDamageTime = ac.getLastDamageTime();
         combatStartTime = ac.getCombatStartTime();
@@ -26,10 +26,10 @@ public class CombatTrackerClone {
         inCombat = ac.getInCombat();
         takingDamage = ac.getTakingDamage();
     }
-    
-    public void overwriteTracker(CombatTracker tracker) {
-        CombatTrackerAccessor ac = (CombatTrackerAccessor) tracker;
-        List<CombatEntry> entries = ac.getEntries();
+
+    public void overwriteTracker(DamageTracker tracker) {
+        DamageTrackerAccessor ac = (DamageTrackerAccessor) tracker;
+        List<DamageRecord> entries = ac.getEntries();
         entries.clear();
         entries.addAll(combatEntries);
         ac.setLastDamageTime(lastDamageTime);
@@ -38,5 +38,5 @@ public class CombatTrackerClone {
         ac.setInCombat(inCombat);
         ac.setTakingDamage(takingDamage);
     }
-    
+
 }

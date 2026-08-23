@@ -1,0 +1,36 @@
+{
+	"schemaVersion": 1,
+	"id": "playerrevive",
+	"version": "${version}",
+	"name": "PlayerRevive",
+	"description": "Help your friends in need and revive them.",
+	"authors": [
+		"CreativeMD"
+	],
+	"contact": {
+		"homepage": "https://modrinth.com/mod/playerrevive",
+		"sources": "https://github.com/CreativeMD/PlayerRevive"
+	},
+	"license": "LGPL-3.0-only",
+	"icon": "assets/playerrevive/playerrevive.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"team.creative.playerrevive.PlayerReviveFabric"
+		],
+		"client": [
+			"team.creative.playerrevive.PlayerReviveClient"
+		]
+	},
+	"mixins": [
+		"playerrevive.mixins.json",
+		"playerrevive.client.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.19.3",
+		"minecraft": "~1.21.1",
+		"java": ">=21",
+		"fabric-api": "*",
+		"creativecore": "*"
+	}
+}

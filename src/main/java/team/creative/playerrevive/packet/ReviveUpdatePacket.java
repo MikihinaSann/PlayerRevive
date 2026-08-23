@@ -2,46 +2,43 @@ package team.creative.playerrevive.packet;
 
 import java.util.UUID;
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.Pose;
-import net.minecraft.world.entity.player.Player;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.entity.EntityPose;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.entity.player.PlayerEntity;
 import team.creative.creativecore.common.network.CreativePacket;
 import team.creative.playerrevive.api.IBleeding;
 import team.creative.playerrevive.server.PlayerReviveServer;
 
 public class ReviveUpdatePacket extends CreativePacket {
-    
+
     public UUID uuid;
-    public CompoundTag nbt;
-    
-    public ReviveUpdatePacket(Player player) {
-        this.nbt = PlayerReviveServer.getBleeding(player).serializeNBT(player.registryAccess());
-        this.uuid = player.getUUID();
+    public NbtCompound nbt;
+
+    public ReviveUpdatePacket(PlayerEntity player) {
+        this.nbt = PlayerReviveServer.getBleeding(player).serializeNBT();
+        this.uuid = player.getUuid();
     }
-    
+
     public ReviveUpdatePacket() {
-        
+
     }
-    
+
     @Override
-    @OnlyIn(value = Dist.CLIENT)
-    public void executeClient(Player player) {
-        Player member = Minecraft.getInstance().level.getPlayerByUUID(uuid);
+    public void executeClient(PlayerEntity player) {
+        PlayerEntity member = MinecraftClient.getInstance().world.getPlayerByUuid(uuid);
         if (member != null) {
             IBleeding bleeding = PlayerReviveServer.getBleeding(member);
-            bleeding.deserializeNBT(player.registryAccess(), nbt);
-            if (!bleeding.isBleeding())
-                member.setPose(Pose.STANDING);
+            bleeding.deserializeNBT(nbt);
+            if (!bleeding.isBleeding() && member.isAlive())
+                member.setPose(EntityPose.STANDING);
         }
     }
-    
+
     @Override
-    public void executeServer(ServerPlayer player) {
-        
+    public void executeServer(ServerPlayerEntity player) {
+
     }
-    
+
 }

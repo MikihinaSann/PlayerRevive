@@ -1,50 +1,51 @@
 package team.creative.playerrevive.packet;
 
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.sound.SoundCategory;
+import net.minecraft.entity.player.PlayerEntity;
 import team.creative.creativecore.common.network.CreativePacket;
-import team.creative.playerrevive.PlayerRevive;
+import team.creative.playerrevive.PlayerReviveFabric;
 import team.creative.playerrevive.api.IBleeding;
 import team.creative.playerrevive.server.PlayerReviveServer;
 
 public class StartSelfRevivePacket extends CreativePacket {
-    
+
     @Override
-    public void executeClient(Player player) {}
-    
+    public void executeClient(PlayerEntity player) {}
+
     @Override
-    public void executeServer(ServerPlayer player) {
-        if (!PlayerRevive.CONFIG.revive.selfRevive.enabled)
+    public void executeServer(ServerPlayerEntity player) {
+        if (!PlayerReviveFabric.CONFIG.revive.selfRevive.enabled)
             return;
-        
+
         IBleeding bleeding = PlayerReviveServer.getBleeding(player);
         if (bleeding == null || bleeding.isSelfReviving())
             return;
-        
+
         boolean consumed = false;
-        if (PlayerRevive.CONFIG.revive.selfRevive.item.is(player.getMainHandItem()) && player.getMainHandItem().getCount() >= PlayerRevive.CONFIG.revive.selfRevive.itemCount) {
-            if (PlayerRevive.CONFIG.revive.selfRevive.consumeItem) {
-                player.getInventory().items.get(player.getInventory().selected).shrink(PlayerRevive.CONFIG.revive.selfRevive.itemCount);
-                player.getInventory().setChanged();
+        if (PlayerReviveFabric.CONFIG.revive.selfRevive.item.is(player.getMainHandStack()) && player.getMainHandStack()
+                .getCount() >= PlayerReviveFabric.CONFIG.revive.selfRevive.itemCount) {
+            if (PlayerReviveFabric.CONFIG.revive.selfRevive.consumeItem) {
+                player.getInventory().getMainHandStack().decrement(PlayerReviveFabric.CONFIG.revive.selfRevive.itemCount);
+                player.getInventory().markDirty();
             }
             consumed = true;
         }
-        
-        if (!consumed && PlayerRevive.CONFIG.revive.selfRevive.item.is(player.getOffhandItem()) && player.getOffhandItem()
-                .getCount() >= PlayerRevive.CONFIG.revive.selfRevive.itemCount) {
-            if (PlayerRevive.CONFIG.revive.selfRevive.consumeItem) {
-                player.getInventory().offhand.getFirst().shrink(PlayerRevive.CONFIG.revive.selfRevive.itemCount);
-                player.getInventory().setChanged();
+
+        if (!consumed && PlayerReviveFabric.CONFIG.revive.selfRevive.item.is(player.getOffHandStack()) && player.getOffHandStack()
+                .getCount() >= PlayerReviveFabric.CONFIG.revive.selfRevive.itemCount) {
+            if (PlayerReviveFabric.CONFIG.revive.selfRevive.consumeItem) {
+                player.getInventory().offHand.get(0).decrement(PlayerReviveFabric.CONFIG.revive.selfRevive.itemCount);
+                player.getInventory().markDirty();
             }
             consumed = true;
         }
-        
+
         if (!consumed)
             return;
-        
+
         bleeding.startSelfRevive();
-        PlayerRevive.CONFIG.revive.selfRevive.sound.play(player, SoundSource.PLAYERS);
+        PlayerReviveFabric.CONFIG.revive.selfRevive.sound.play(player, SoundCategory.PLAYERS);
     }
-    
+
 }

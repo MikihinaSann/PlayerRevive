@@ -3,11 +3,9 @@
 	"package": "team.creative.playerrevive.mixin",
 	"compatibilityLevel": "JAVA_21",
 	"mixins": [
-		"DamageTrackerAccessor",
-		"LivingEntityMixin",
-		"PlayerEntityMixin",
-		"ServerPlayerEntityMixin",
-		"ServerPlayNetworkHandlerMixin"
+		"GameRendererAccessor",
+		"MinecraftClientMixin",
+		"MinecraftClientScreenMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

@@ -1,40 +1,56 @@
 plugins {
-    id 'eclipse'
-    id 'idea'
-    id 'com.modrinth.minotaur' version '2.+'
-    id 'net.neoforged.gradle.userdev' version '7.0.+'
+	id 'net.fabricmc.fabric-loom-remap' version "${loom_version}"
+	id 'maven-publish'
 }
 
-group= "team.creative" + project.mod_id
-
-java.toolchain.languageVersion = JavaLanguageVersion.of(21)
-
-project.evaluationDependsOn(":CreativeCore")
-
-runs {  
-    configureEach {
-        workingDirectory project.file('run')
-        systemProperty 'forge.logging.console.level', 'debug'
-        
-        modSource project(":CreativeCore").sourceSets.main
-        modSource project.sourceSets.main
-    }
-    
-    client {
-        arguments '--username', '"Dev###"'
-    }
-    
-    server {
-    }
+repositories {
+	// CurseMaven for CreativeCore
+	maven {
+		name = 'CurseMaven'
+		url = 'https://cursemaven.com'
+		content {
+			includeGroup 'curse.maven'
+		}
+	}
 }
 
 dependencies {
-    implementation "net.neoforged:neoforge:${forge_version}"
-    
-    implementation project(':CreativeCore')
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+
+	// Fabric API
+	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+	// CreativeCore Fabric
+	modImplementation "curse.maven:creativecore-257814:${project.creativecore_version}"
 }
 
-modDependencies = [
-    [ modId: "creativecore", type: "required", ordering: "NONE", side: "BOTH", versionRange: "[" + creativecore_version + ",)" ]
-]
-modMixins = [ "playerrevive.mixins.json" ]
+processResources {
+	def version = project.mod_version
+	inputs.property "version", version
+
+	filesMatching("fabric.mod.json") {
+		expand "version": version
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 21
+}
+
+java {
+	withSourcesJar()
+
+	sourceCompatibility = JavaVersion.VERSION_21
+	targetCompatibility = JavaVersion.VERSION_21
+}
+
+jar {
+	def projectName = project.name
+	inputs.property "projectName", projectName
+
+	from("LICENSE") {
+		rename { "${it}_$projectName"}
+	}
+}

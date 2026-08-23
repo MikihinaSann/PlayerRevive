@@ -1,18 +1,23 @@
 package team.creative.playerrevive.api.event;
 
-import net.minecraft.world.entity.player.Player;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.minecraft.entity.player.PlayerEntity;
 
-public class ReviveCompleteEvent extends PlayerEvent {
-    
-    private final Player target;
-    
-    public ReviveCompleteEvent(Player player, Player target) {
-        super(player);
+public class ReviveCompleteEvent {
+
+    private final PlayerEntity helper;
+    private final PlayerEntity target;
+
+    public ReviveCompleteEvent(PlayerEntity helper, PlayerEntity target) {
+        this.helper = helper;
         this.target = target;
     }
-    
-    public Player getTarget() {
+
+    public PlayerEntity getHelper() {
+        return helper;
+    }
+
+    public PlayerEntity getTarget() {
         return target;
     }
+
 }
