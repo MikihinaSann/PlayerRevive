@@ -1,18 +1,23 @@
 package team.creative.playerrevive.api.event;
 
 import net.minecraft.world.entity.player.Player;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 
-public class ReviveCancelEvent extends PlayerEvent {
-    
+public class ReviveCancelEvent {
+
+    private final Player helper;
     private final Player target;
-    
-    public ReviveCancelEvent(Player player, Player target) {
-        super(player);
+
+    public ReviveCancelEvent(Player helper, Player target) {
+        this.helper = helper;
         this.target = target;
     }
-    
+
+    public Player getHelper() {
+        return helper;
+    }
+
     public Player getTarget() {
         return target;
     }
+
 }

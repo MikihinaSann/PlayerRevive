@@ -5,7 +5,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import team.creative.creativecore.common.network.CreativePacket;
-import team.creative.playerrevive.PlayerRevive;
+import team.creative.playerrevive.PlayerReviveFabric;
 import team.creative.playerrevive.api.IBleeding;
 import team.creative.playerrevive.server.PlayerReviveServer;
 
@@ -16,7 +16,7 @@ public class StartSelfRevivePacket extends CreativePacket {
     
     @Override
     public void executeServer(ServerPlayer player) {
-        if (!PlayerRevive.CONFIG.revive.selfRevive.enabled)
+        if (!PlayerReviveFabric.CONFIG.revive.selfRevive.enabled)
             return;
         
         IBleeding bleeding = PlayerReviveServer.getBleeding(player);
@@ -24,19 +24,19 @@ public class StartSelfRevivePacket extends CreativePacket {
             return;
         
         boolean consumed = false;
-        if (PlayerRevive.CONFIG.revive.selfRevive.item.is(player.level(), player.getMainHandItem()) && player.getMainHandItem()
-                .getCount() >= PlayerRevive.CONFIG.revive.selfRevive.itemCount) {
-            if (PlayerRevive.CONFIG.revive.selfRevive.consumeItem) {
-                player.getInventory().getSelectedItem().shrink(PlayerRevive.CONFIG.revive.selfRevive.itemCount);
+        if (PlayerReviveFabric.CONFIG.revive.selfRevive.item.is(player.level(), player.getMainHandItem()) && player.getMainHandItem()
+                .getCount() >= PlayerReviveFabric.CONFIG.revive.selfRevive.itemCount) {
+            if (PlayerReviveFabric.CONFIG.revive.selfRevive.consumeItem) {
+                player.getInventory().getSelectedItem().shrink(PlayerReviveFabric.CONFIG.revive.selfRevive.itemCount);
                 player.getInventory().setChanged();
             }
             consumed = true;
         }
         
-        if (!consumed && PlayerRevive.CONFIG.revive.selfRevive.item.is(player.level(), player.getOffhandItem()) && player.getOffhandItem()
-                .getCount() >= PlayerRevive.CONFIG.revive.selfRevive.itemCount) {
-            if (PlayerRevive.CONFIG.revive.selfRevive.consumeItem) {
-                player.getInventory().getItem(Inventory.SLOT_OFFHAND).shrink(PlayerRevive.CONFIG.revive.selfRevive.itemCount);
+        if (!consumed && PlayerReviveFabric.CONFIG.revive.selfRevive.item.is(player.level(), player.getOffhandItem()) && player.getOffhandItem()
+                .getCount() >= PlayerReviveFabric.CONFIG.revive.selfRevive.itemCount) {
+            if (PlayerReviveFabric.CONFIG.revive.selfRevive.consumeItem) {
+                player.getInventory().getItem(Inventory.SLOT_OFFHAND).shrink(PlayerReviveFabric.CONFIG.revive.selfRevive.itemCount);
                 player.getInventory().setChanged();
             }
             consumed = true;
@@ -46,7 +46,7 @@ public class StartSelfRevivePacket extends CreativePacket {
             return;
         
         bleeding.startSelfRevive();
-        PlayerRevive.CONFIG.revive.selfRevive.sound.play(player, SoundSource.PLAYERS);
+        PlayerReviveFabric.CONFIG.revive.selfRevive.sound.play(player, SoundSource.PLAYERS);
     }
     
 }
