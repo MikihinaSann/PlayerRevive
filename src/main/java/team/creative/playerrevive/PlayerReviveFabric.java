@@ -21,6 +21,7 @@ import net.minecraft.util.Identifier;
 import net.minecraft.entity.damage.DamageType;
 import team.creative.creativecore.common.config.holder.CreativeConfigRegistry;
 import team.creative.creativecore.common.network.CreativeNetwork;
+import team.creative.playerrevive.mixin.EntitySelectorOptionsAccessor;
 import team.creative.playerrevive.packet.GiveUpPacket;
 import team.creative.playerrevive.packet.HelperPacket;
 import team.creative.playerrevive.packet.ReviveUpdatePacket;
@@ -65,29 +66,16 @@ public class PlayerReviveFabric implements ModInitializer {
         // Register server events
         ReviveEventServer.register();
 
-        // Register entity selector option via reflection (putOption is private)
-        try {
-            java.lang.reflect.Method putOption = net.minecraft.command.EntitySelectorOptions.class.getDeclaredMethod("putOption",
-                    String.class, net.minecraft.command.EntitySelectorOptions.SelectorHandler.class,
-                    java.util.function.Predicate.class, Text.class);
-            putOption.setAccessible(true);
-            putOption.invoke(null, "bleeding",
-                    (net.minecraft.command.EntitySelectorOptions.SelectorHandler) reader -> {
-                        boolean value = reader.getReader().readBoolean();
-                        reader.addPredicate(entity -> {
-                            boolean entityValue = false;
-                            if (entity instanceof PlayerEntity p) {
-                                var bleeding = PlayerReviveServer.getBleeding(p);
-                                entityValue = bleeding.isBleeding();
-                            }
-                            return entityValue == value;
-                        });
-                    },
-                    (java.util.function.Predicate<net.minecraft.command.EntitySelectorReader>) reader -> true,
-                    Text.translatable("argument.entity.options.bleeding.description"));
-        } catch (Exception e) {
-            LOGGER.error("Failed to register entity selector option", e);
-        }
+        // Register entity selector option via mixin accessor (putOption is private)
+        EntitySelectorOptionsAccessor.putOption("bleeding", reader -> {
+            boolean value = reader.getReader().readBoolean();
+            reader.addPredicate(entity -> {
+                boolean entityValue = false;
+                if (entity instanceof PlayerEntity p)
+                    entityValue = PlayerReviveServer.getBleeding(p).isBleeding();
+                return entityValue == value;
+            });
+        }, reader -> true, Text.translatable("argument.entity.options.bleeding.description"));
 
         // Register commands
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {

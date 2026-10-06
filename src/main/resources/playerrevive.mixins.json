@@ -4,6 +4,7 @@
 	"compatibilityLevel": "JAVA_21",
 	"mixins": [
 		"DamageTrackerAccessor",
+		"EntitySelectorOptionsAccessor",
 		"LivingEntityMixin",
 		"PlayerEntityMixin",
 		"ServerPlayerEntityMixin",
