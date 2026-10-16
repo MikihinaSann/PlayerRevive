@@ -1,0 +1,16 @@
+{
+    "required": true,
+    "package": "team.creative.playerrevive.mixin",
+    "compatibilityLevel": "JAVA_21",
+    "refmap": "playerrevive.refmap.json",
+    "client": [
+        "LocalPlayerAccessor",
+        "MinecraftAccessor",
+        "MinecraftScreenMixin",
+        "MultiPlayerGameModeMixin"
+    ],
+    "injectors": {
+        "defaultRequire": 1
+    },
+    "minVersion": "0.8"
+}

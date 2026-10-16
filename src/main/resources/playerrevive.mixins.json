@@ -1,18 +1,17 @@
 {
     "required": true,
     "package": "team.creative.playerrevive.mixin",
-    "compatibilityLevel": "JAVA_17",
-    "refmap": "playerrevive.mixin.refmap.json",
-    "server": [
-    ],
+    "compatibilityLevel": "JAVA_21",
+    "refmap": "playerrevive.refmap.json",
     "mixins": [
         "CombatTrackerAccessor",
+        "CommandsMixin",
+        "LivingEntityMixin",
         "PlayerMixin",
         "ServerPlayerMixin"
     ],
-    "client": [
-        "LocalPlayerAccessor",
-        "MinecraftAccessor"
-    ],
+    "injectors": {
+        "defaultRequire": 1
+    },
     "minVersion": "0.8"
 }

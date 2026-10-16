@@ -175,9 +175,9 @@ public class PlayerReviveConfig {
     public static class Sounds {
         
         @CreativeConfig
-        public SoundConfig death = new SoundConfig(ResourceLocation.tryBuild(PlayerRevive.MODID, "death"));
+        public SoundConfig death = new SoundConfig(ResourceLocation.tryBuild(PlayerReviveFabric.MODID, "death"));
         @CreativeConfig
-        public SoundConfig revived = new SoundConfig(ResourceLocation.tryBuild(PlayerRevive.MODID, "revived"));
+        public SoundConfig revived = new SoundConfig(ResourceLocation.tryBuild(PlayerReviveFabric.MODID, "revived"));
         
     }
     

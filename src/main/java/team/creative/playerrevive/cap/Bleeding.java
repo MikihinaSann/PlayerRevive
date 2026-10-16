@@ -12,7 +12,7 @@ import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
-import team.creative.playerrevive.PlayerRevive;
+import team.creative.playerrevive.PlayerReviveFabric;
 import team.creative.playerrevive.api.CombatTrackerClone;
 import team.creative.playerrevive.api.IBleeding;
 import team.creative.playerrevive.packet.HelperPacket;
@@ -35,26 +35,25 @@ public class Bleeding implements IBleeding {
     @Override
     public void tick(Player player) {
         if (player.getPose() != Pose.SWIMMING)
-            player.setForcedPose(Pose.SWIMMING);
+            player.setPose(Pose.SWIMMING);
         for (Iterator<Player> iterator = revivingPlayers.iterator(); iterator.hasNext();) {
             Player helper = iterator.next();
-            if (helper.distanceTo(player) > PlayerRevive.CONFIG.revive.maxDistance) {
-                PlayerRevive.NETWORK.sendToClient(new HelperPacket(null, false), (ServerPlayer) helper);
+            if (helper.distanceTo(player) > PlayerReviveFabric.CONFIG.revive.maxDistance) {
+                PlayerReviveFabric.NETWORK.sendToClient(new HelperPacket(null, false), (ServerPlayer) helper);
                 iterator.remove();
             }
         }
-        //player.setPose(Pose.SWIMMING);
-        if (revivingPlayers.isEmpty() || !PlayerRevive.CONFIG.revive.haltBleedTime)
+        if (revivingPlayers.isEmpty() || !PlayerReviveFabric.CONFIG.revive.haltBleedTime)
             timeLeft--;
-        if (revivingPlayers.isEmpty() && PlayerRevive.CONFIG.revive.resetProgress)
+        if (revivingPlayers.isEmpty() && PlayerReviveFabric.CONFIG.revive.resetProgress)
             progress = 0;
         
-        progress += revivingPlayers.size() * PlayerRevive.CONFIG.revive.progressPerPlayer;
+        progress += revivingPlayers.size() * PlayerReviveFabric.CONFIG.revive.progressPerPlayer;
         downedTime++;
         
-        if (PlayerRevive.CONFIG.revive.exhaustion > 0)
+        if (PlayerReviveFabric.CONFIG.revive.exhaustion > 0)
             for (int i = 0; i < revivingPlayers.size(); i++)
-                revivingPlayers.get(i).causeFoodExhaustion(PlayerRevive.CONFIG.revive.exhaustion);
+                revivingPlayers.get(i).causeFoodExhaustion(PlayerReviveFabric.CONFIG.revive.exhaustion);
     }
     
     @Override
@@ -75,7 +74,7 @@ public class Bleeding implements IBleeding {
     
     @Override
     public boolean revived() {
-        return progress >= PlayerRevive.CONFIG.revive.requiredReviveProgress;
+        return progress >= PlayerReviveFabric.CONFIG.revive.requiredReviveProgress;
     }
     
     @Override
@@ -109,7 +108,7 @@ public class Bleeding implements IBleeding {
         this.bleeding = true;
         this.progress = 0;
         this.downedTime = 0;
-        this.timeLeft = PlayerRevive.CONFIG.bleeding.bleedTime;
+        this.timeLeft = PlayerReviveFabric.CONFIG.bleeding.bleedTime;
         this.lastSource = source;
         this.trackerClone = new CombatTrackerClone(player.getCombatTracker());
     }
@@ -144,7 +143,7 @@ public class Bleeding implements IBleeding {
     public DamageSource getSource(RegistryAccess access) {
         if (lastSource != null)
             return lastSource;
-        return new DamageSource(access.lookupOrThrow(Registries.DAMAGE_TYPE).getOrThrow(PlayerRevive.BLED_TO_DEATH));
+        return new DamageSource(access.lookupOrThrow(Registries.DAMAGE_TYPE).getOrThrow(PlayerReviveFabric.BLED_TO_DEATH));
     }
     
     @Override
