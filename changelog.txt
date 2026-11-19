@@ -1,3 +1,6 @@
+2.0.37-fabric
+Ported to Fabric 1.21.10
+
 2.0.37
 Added option forceLookAt which makes the reviving player lock to the bleeding player
 
