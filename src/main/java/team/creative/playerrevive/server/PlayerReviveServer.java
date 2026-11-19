@@ -53,9 +53,22 @@ public class PlayerReviveServer {
         sendUpdatePacket(player);
     }
 
-    private static void resetPlayer(Player player, IBleeding revive) {
+    public static void cancelHelper(Player bleeding, Player helper) {
+        PlayerReviveEvents.fireReviveCancel(helper, bleeding);
+        PlayerReviveFabric.NETWORK.sendToClient(new HelperPacket(null, false), (ServerPlayer) helper);
+    }
+
+    public static void completeHelper(Player bleeding, Player helper) {
+        PlayerReviveEvents.fireReviveComplete(helper, bleeding);
+        PlayerReviveFabric.NETWORK.sendToClient(new HelperPacket(null, false), (ServerPlayer) helper);
+    }
+
+    private static void resetPlayer(Player player, IBleeding revive, boolean successful) {
         for (Player helper : revive.revivingPlayers())
-            PlayerReviveFabric.NETWORK.sendToClient(new HelperPacket(null, false), (ServerPlayer) helper);
+            if (successful)
+                completeHelper(player, helper);
+            else
+                cancelHelper(player, helper);
         revive.revivingPlayers().clear();
 
         sendUpdatePacket(player);
@@ -63,12 +76,12 @@ public class PlayerReviveServer {
 
     public static void revive(Player player) {
         IBleeding revive = getBleeding(player);
-        revive.revive();
+        revive.revive(player);
 
         for (MobEffectConfig effect : PlayerReviveFabric.CONFIG.revive.revivedEffects)
             player.addEffect(effect.create());
 
-        resetPlayer(player, revive);
+        resetPlayer(player, revive, true);
         player.setHealth(PlayerReviveFabric.CONFIG.revive.healthAfter);
 
         PlayerReviveFabric.CONFIG.sounds.revived.play(player, SoundSource.PLAYERS);
@@ -90,8 +103,8 @@ public class PlayerReviveServer {
         player.setHealth(0.0F);
         revive.forceBledOut();
         player.die(source);
-        resetPlayer(player, revive);
-        revive.revive(); // Done for compatibility reason for rare scenarios the player will not die
+        resetPlayer(player, revive, false);
+        revive.revive(player); // Done for compatibility reason for rare scenarios the player will not die
         player.setPose(Pose.STANDING);
 
         PlayerReviveFabric.CONFIG.sounds.death.play(player, SoundSource.PLAYERS);
@@ -112,6 +125,7 @@ public class PlayerReviveServer {
         for (Iterator<ServerPlayer> iterator = player.level().getServer().getPlayerList().getPlayers().iterator(); iterator.hasNext();) {
             ServerPlayer member = iterator.next();
             IBleeding revive = getBleeding(member);
+            PlayerReviveEvents.fireReviveCancel(player, member);
             revive.revivingPlayers().remove(player);
         }
 

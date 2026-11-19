@@ -80,6 +80,9 @@ public class PlayerReviveConfig {
         public boolean shouldGlow = false;
         
         @CreativeConfig
+        public boolean disableJump = true;
+        
+        @CreativeConfig
         public List<MobEffectConfig> bleedingEffects = Arrays.asList(new MobEffectConfig(BuiltInRegistries.MOB_EFFECT, ResourceLocation.tryBuild("minecraft",
             "slowness"), 2, 10, true));
         
@@ -136,9 +139,12 @@ public class PlayerReviveConfig {
     public static class Revive {
         
         @CreativeConfig
-        public float requiredReviveProgress = 100;
+        public SelfRevive selfRevive = new SelfRevive();
+        
         @CreativeConfig
-        public float progressPerPlayer = 1;
+        public double requiredReviveProgress = 100;
+        @CreativeConfig
+        public double progressPerPlayer = 1;
         @CreativeConfig
         public float exhaustion = 0.5F;
         
@@ -156,9 +162,15 @@ public class PlayerReviveConfig {
         @CreativeConfig
         public CreativeIngredient reviveItem = new CreativeIngredientItem(Items.PAPER);
         @CreativeConfig
+        public int reviveItemCount = 1;
+        
+        @CreativeConfig
         public boolean needReviveItem = false;
         @CreativeConfig
         public boolean consumeReviveItem = false;
+        
+        @CreativeConfig
+        public boolean teammatesOnly = false;
         
         @CreativeConfig
         public double maxDistance = 3;
@@ -169,6 +181,28 @@ public class PlayerReviveConfig {
         
         @CreativeConfig
         public boolean forceLookAt = false;
+        
+    }
+    
+    public static class SelfRevive {
+        
+        @CreativeConfig
+        public boolean enabled = false;
+        
+        @CreativeConfig
+        public CreativeIngredient item = new CreativeIngredientItem(Items.PAPER);
+        
+        @CreativeConfig
+        public int itemCount = 1;
+        
+        @CreativeConfig
+        public boolean consumeItem = true;
+        
+        @CreativeConfig
+        public double progress = 0.1;
+        
+        @CreativeConfig
+        public SoundConfig sound = new SoundConfig(ResourceLocation.withDefaultNamespace("item.bundle.remove_one"));
         
     }
     

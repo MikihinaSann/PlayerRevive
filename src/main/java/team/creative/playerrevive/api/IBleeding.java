@@ -24,7 +24,7 @@ public interface IBleeding {
 
     public boolean revived();
 
-    public void revive();
+    public void revive(Player player);
 
     public int timeLeft();
 
@@ -39,6 +39,10 @@ public interface IBleeding {
     public boolean isItemConsumed();
 
     public void setItemConsumed();
+    
+    public void startSelfRevive();
+    
+    public boolean isSelfReviving();
 
     public void serialize(ValueOutput output);
 

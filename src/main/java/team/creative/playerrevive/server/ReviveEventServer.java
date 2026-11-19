@@ -25,6 +25,7 @@ import team.creative.playerrevive.PlayerReviveFabric;
 import team.creative.playerrevive.PlayerReviveConfig.DamageTypeConfig;
 import team.creative.playerrevive.api.IBleeding;
 import team.creative.playerrevive.api.PlayerExtender;
+import team.creative.playerrevive.api.event.PlayerReviveEvents;
 import team.creative.playerrevive.packet.HelperPacket;
 
 public class ReviveEventServer {
@@ -113,18 +114,24 @@ public class ReviveEventServer {
         if (!revive.isBleeding())
             return false;
 
+        if (PlayerReviveFabric.CONFIG.revive.teammatesOnly && !helper.getTeam().isAlliedTo(target.getTeam())) {
+            helper.displayClientMessage(Component.translatable("playerrevive.revive.other_team"), false);
+            return true;
+        }
+
         if (PlayerReviveFabric.CONFIG.revive.needReviveItem) {
             if (PlayerReviveFabric.CONFIG.revive.consumeReviveItem && !revive.isItemConsumed()) {
-                if (PlayerReviveFabric.CONFIG.revive.reviveItem.is(helper.level(), helper.getMainHandItem())) {
+                if (PlayerReviveFabric.CONFIG.revive.reviveItem.is(helper.level(), helper.getMainHandItem()) && helper.getMainHandItem()
+                        .getCount() >= PlayerReviveFabric.CONFIG.revive.reviveItemCount) {
                     if (!helper.isCreative()) {
-                        helper.getMainHandItem().shrink(1);
+                        helper.getMainHandItem().shrink(PlayerReviveFabric.CONFIG.revive.reviveItemCount);
                         helper.getInventory().setChanged();
                     }
                     revive.setItemConsumed();
                 } else {
                     if (!helper.level().isClientSide())
-                        helper.displayClientMessage(Component.translatable("playerrevive.revive.item", PlayerReviveFabric.CONFIG.revive.reviveItem
-                                .description()), false);
+                        helper.displayClientMessage(Component.translatable("playerrevive.revive.item", PlayerReviveFabric.CONFIG.revive.reviveItemCount,
+                                PlayerReviveFabric.CONFIG.revive.reviveItem.description()), false);
                     return true;
                 }
             } else if (!PlayerReviveFabric.CONFIG.revive.reviveItem.is(helper.level(), helper.getMainHandItem()))
@@ -133,6 +140,7 @@ public class ReviveEventServer {
 
         PlayerReviveServer.removePlayerAsHelper(helper);
         revive.revivingPlayers().add(helper);
+        PlayerReviveEvents.fireReviveStart(helper, target);
         PlayerReviveFabric.NETWORK.sendToClient(new HelperPacket(target.getUUID(), true), (ServerPlayer) helper);
         return true;
     }
@@ -211,7 +219,7 @@ public class ReviveEventServer {
             if (revive.isBleeding())
                 PlayerReviveFabric.CONFIG.sounds.death.play(player, SoundSource.PLAYERS);
             for (Player helper : revive.revivingPlayers())
-                PlayerReviveFabric.NETWORK.sendToClient(new HelperPacket(null, false), (ServerPlayer) helper);
+                PlayerReviveServer.cancelHelper(player, helper);
             revive.revivingPlayers().clear();
             return false;
         }

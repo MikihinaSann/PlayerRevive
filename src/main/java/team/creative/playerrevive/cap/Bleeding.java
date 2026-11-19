@@ -6,18 +6,25 @@ import java.util.List;
 
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import team.creative.playerrevive.PlayerReviveFabric;
 import team.creative.playerrevive.api.CombatTrackerClone;
 import team.creative.playerrevive.api.IBleeding;
+import team.creative.playerrevive.api.event.PlayerReviveEvents;
 import team.creative.playerrevive.packet.HelperPacket;
 
 public class Bleeding implements IBleeding {
+    
+    private static final ResourceLocation JUMP_HEIGHT = ResourceLocation.tryBuild(PlayerReviveFabric.MODID, "stopjump");
     
     private boolean bleeding;
     private float progress;
@@ -27,6 +34,8 @@ public class Bleeding implements IBleeding {
     private DamageSource lastSource;
     private CombatTrackerClone trackerClone;
     private boolean itemConsumed = false;
+    
+    private boolean selfReviving = false;
     
     public final List<Player> revivingPlayers = new ArrayList<>();
     
@@ -39,16 +48,19 @@ public class Bleeding implements IBleeding {
         for (Iterator<Player> iterator = revivingPlayers.iterator(); iterator.hasNext();) {
             Player helper = iterator.next();
             if (helper.distanceTo(player) > PlayerReviveFabric.CONFIG.revive.maxDistance) {
+                PlayerReviveEvents.fireReviveCancel(helper, player);
                 PlayerReviveFabric.NETWORK.sendToClient(new HelperPacket(null, false), (ServerPlayer) helper);
                 iterator.remove();
             }
         }
         if (revivingPlayers.isEmpty() || !PlayerReviveFabric.CONFIG.revive.haltBleedTime)
             timeLeft--;
-        if (revivingPlayers.isEmpty() && PlayerReviveFabric.CONFIG.revive.resetProgress)
+        if (revivingPlayers.isEmpty() && PlayerReviveFabric.CONFIG.revive.resetProgress && !selfReviving)
             progress = 0;
         
         progress += revivingPlayers.size() * PlayerReviveFabric.CONFIG.revive.progressPerPlayer;
+        if (selfReviving)
+            progress += PlayerReviveFabric.CONFIG.revive.selfRevive.progress;
         downedTime++;
         
         if (PlayerReviveFabric.CONFIG.revive.exhaustion > 0)
@@ -88,6 +100,7 @@ public class Bleeding implements IBleeding {
         output.putFloat("progress", progress);
         output.putBoolean("bleeding", bleeding);
         output.putBoolean("consumed", itemConsumed);
+        output.putBoolean("selfRevive", selfReviving);
     }
     
     @Override
@@ -96,6 +109,7 @@ public class Bleeding implements IBleeding {
         progress = input.getFloatOr("progress", 0);
         bleeding = input.getBooleanOr("bleeding", false);
         itemConsumed = input.getBooleanOr("consumed", false);
+        selfReviving = input.getBooleanOr("selfRevive", false);
     }
     
     @Override
@@ -111,10 +125,12 @@ public class Bleeding implements IBleeding {
         this.timeLeft = PlayerReviveFabric.CONFIG.bleeding.bleedTime;
         this.lastSource = source;
         this.trackerClone = new CombatTrackerClone(player.getCombatTracker());
+        if (PlayerReviveFabric.CONFIG.bleeding.disableJump)
+            player.getAttribute(Attributes.JUMP_STRENGTH).addTransientModifier(new AttributeModifier(JUMP_HEIGHT, -1, Operation.ADD_MULTIPLIED_TOTAL));
     }
     
     @Override
-    public void revive() {
+    public void revive(Player player) {
         this.bleeding = false;
         this.progress = 0;
         this.timeLeft = 0;
@@ -122,6 +138,8 @@ public class Bleeding implements IBleeding {
         this.lastSource = null;
         this.trackerClone = null;
         this.itemConsumed = false;
+        this.selfReviving = false;
+        player.getAttribute(Attributes.JUMP_STRENGTH).removeModifier(JUMP_HEIGHT);
     }
     
     @Override
@@ -154,6 +172,16 @@ public class Bleeding implements IBleeding {
     @Override
     public void setItemConsumed() {
         itemConsumed = true;
+    }
+    
+    @Override
+    public void startSelfRevive() {
+        selfReviving = true;
+    }
+    
+    @Override
+    public boolean isSelfReviving() {
+        return selfReviving;
     }
     
 }

@@ -16,11 +16,13 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
+import team.creative.creativecore.common.util.mc.TooltipUtils;
 import team.creative.playerrevive.PlayerReviveFabric;
 import team.creative.playerrevive.api.IBleeding;
 import team.creative.playerrevive.mixin.LocalPlayerAccessor;
 import team.creative.playerrevive.mixin.MinecraftAccessor;
 import team.creative.playerrevive.packet.GiveUpPacket;
+import team.creative.playerrevive.packet.StartSelfRevivePacket;
 import team.creative.playerrevive.server.PlayerReviveServer;
 
 public class ReviveEventClient {
@@ -73,7 +75,7 @@ public class ReviveEventClient {
 
         IBleeding revive = PlayerReviveServer.getBleeding(player);
 
-        if (revive.isBleeding())
+        if (revive.isBleeding()) {
             if (mc.options.keyAttack.isDown())
                 if (giveUpTimer > PlayerReviveFabric.CONFIG.bleeding.giveUpSeconds * 20) {
                     PlayerReviveFabric.NETWORK.sendToServer(new GiveUpPacket());
@@ -82,7 +84,11 @@ public class ReviveEventClient {
                     giveUpTimer++;
             else
                 giveUpTimer = 0;
-        else
+
+            if (PlayerReviveFabric.CONFIG.revive.selfRevive.enabled && mc.options.keyUse.isDown() && player.isHolding(x -> PlayerReviveFabric.CONFIG.revive
+                    .selfRevive.item.is(player.level(), x) && x.getCount() >= PlayerReviveFabric.CONFIG.revive.selfRevive.itemCount))
+                PlayerReviveFabric.NETWORK.sendToServer(new StartSelfRevivePacket());
+        } else
             giveUpTimer = 0;
     }
 
@@ -188,9 +194,14 @@ public class ReviveEventClient {
                     List<Component> list = new ArrayList<>();
                     IBleeding bleeding = PlayerReviveServer.getBleeding(player);
                     list.add(Component.translatable("playerrevive.gui.label.time_left", formatTime(bleeding.timeLeft())));
-                    list.add(Component.literal("" + bleeding.getProgress() + "/" + PlayerReviveFabric.CONFIG.revive.requiredReviveProgress));
-                    list.add(Component.translatable("playerrevive.gui.hold", mc.options.keyAttack.getTranslatedKeyMessage(),
+                    list.add(Component.literal("" + TooltipUtils.print(bleeding.getProgress()) + "/" + PlayerReviveFabric.CONFIG.revive
+                            .requiredReviveProgress));
+                    list.add(Component.translatable("playerrevive.gui.give_up.hold", mc.options.keyAttack.getTranslatedKeyMessage(),
                         ((PlayerReviveFabric.CONFIG.bleeding.giveUpSeconds * 20 - giveUpTimer) / 20) + 1));
+
+                    if (PlayerReviveFabric.CONFIG.revive.selfRevive.enabled)
+                        list.add(Component.translatable("playerrevive.gui.self_revive.hold", PlayerReviveFabric.CONFIG.revive.selfRevive.itemCount,
+                            PlayerReviveFabric.CONFIG.revive.selfRevive.item.description()));
                     render(graphics, list);
                 }
             }
